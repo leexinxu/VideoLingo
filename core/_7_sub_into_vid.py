@@ -7,17 +7,17 @@ from core.utils import *
 
 SRC_FONT_SIZE = 15
 TRANS_FONT_SIZE = 17
-FONT_NAME = 'Arial'
-TRANS_FONT_NAME = 'Arial'
 
-# Linux need to install google noto fonts: apt-get install fonts-noto
-if platform.system() == 'Linux':
+# 使用苹果的漂亮字体
+if platform.system() == 'Darwin':  # macOS
+    FONT_NAME = 'Helvetica'  # 苹果经典字体，用于英文
+    TRANS_FONT_NAME = 'Songti'  # 苹果宋体，用于中文
+elif platform.system() == 'Linux':
     FONT_NAME = 'NotoSansCJK-Regular'
     TRANS_FONT_NAME = 'NotoSansCJK-Regular'
-# Mac OS has different font names
-elif platform.system() == 'Darwin':
-    FONT_NAME = 'Arial Unicode MS'
-    TRANS_FONT_NAME = 'Arial Unicode MS'
+else:  # Windows
+    FONT_NAME = 'Arial'
+    TRANS_FONT_NAME = 'Arial'
 
 SRC_FONT_COLOR = '&HFFFFFF'
 SRC_OUTLINE_COLOR = '&H000000'

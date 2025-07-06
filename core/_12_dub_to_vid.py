@@ -17,11 +17,14 @@ DUB_SUB_FILE = 'output/dub.srt'
 DUB_AUDIO = 'output/dub.mp3'
 
 TRANS_FONT_SIZE = 17
-TRANS_FONT_NAME = 'Arial'
-if platform.system() == 'Linux':
+
+# 使用苹果的漂亮字体
+if platform.system() == 'Darwin':  # macOS
+    TRANS_FONT_NAME = 'Songti'  # 苹果宋体，用于中文
+elif platform.system() == 'Linux':
     TRANS_FONT_NAME = 'NotoSansCJK-Regular'
-if platform.system() == 'Darwin':
-    TRANS_FONT_NAME = 'Arial Unicode MS'
+else:  # Windows
+    TRANS_FONT_NAME = 'Arial'
 
 TRANS_FONT_COLOR = '&H00FFFF'
 TRANS_OUTLINE_COLOR = '&H000000'
