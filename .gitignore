@@ -172,5 +172,7 @@ config.backup.yaml
 runtime/
 dev/
 installer_files/
+
+# cookies
 cookies/
-bilibili_cookies.json
+uploader_config/bilibili_cookies.json
