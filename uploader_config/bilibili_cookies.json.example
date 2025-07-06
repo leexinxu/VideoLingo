@@ -1,0 +1,25 @@
+{
+  "cookie_info": {
+    "cookies": [
+      {
+        "name": "SESSDATA",
+        "value": "your_sessdata_here"
+      },
+      {
+        "name": "bili_jct",
+        "value": "your_bili_jct_here"
+      },
+      {
+        "name": "DedeUserID",
+        "value": "your_dede_user_id_here"
+      },
+      {
+        "name": "DedeUserID__ckMd5",
+        "value": "your_dede_user_id_ck_md5_here"
+      }
+    ]
+  },
+  "token_info": {
+    "access_token": "your_access_token_here"
+  }
+} 

@@ -1,0 +1,33 @@
+{
+  "monitor_settings": {
+    "check_interval": 60,
+    "max_videos_per_check": 50,
+    "processing_delay": 5
+  },
+  "playlists": {
+    "中字": {
+      "url": "https://www.youtube.com/playlist?list=PLxjtcx2z5_41xdgXxdXCZ8lFcSwTZujRt",
+      "dubbing": false,
+      "description": "中字播放列表 - 仅翻译生成字幕",
+      "enabled": true
+    },
+    "中配": {
+      "url": "https://www.youtube.com/playlist?list=PLxjtcx2z5_42OhI7vyzYVxXpzb_XIadrN",
+      "dubbing": true,
+      "description": "中配播放列表 - 翻译并配音",
+      "enabled": true
+    }
+  },
+  "output_settings": {
+    "archive_after_processing": true,
+    "keep_processed_videos": false,
+    "log_level": "INFO",
+    "history_organization": {
+      "enabled": true,
+      "by_playlist": true,
+      "by_video": true,
+      "include_process_info": true,
+      "auto_cleanup_days": 30
+    }
+  }
+} 

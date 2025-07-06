@@ -1,0 +1,22 @@
+{
+  "douyin": {
+    "enabled": true,
+    "account_file": "cookies/douyin_uploader/account.json",
+    "auto_upload": true,
+    "schedule_time": null,
+    "location": "北京市",
+    "tags": [],
+    "chrome_path": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+  },
+  "bilibili": {
+    "enabled": true,
+    "auto_upload": true,
+    "schedule_time": null
+  },
+  "upload_settings": {
+    "max_title_length": 30,
+    "max_tags": 10,
+    "retry_times": 3,
+    "wait_time": 2
+  }
+}
