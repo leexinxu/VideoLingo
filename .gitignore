@@ -172,3 +172,5 @@ config.backup.yaml
 runtime/
 dev/
 installer_files/
+cookies/douyin_uploader/account.json
+uploader_config/bilibili_cookies.json
