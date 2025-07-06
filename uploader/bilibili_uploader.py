@@ -93,7 +93,7 @@ class BilibiliUploader:
     
     def generate_tags(self, playlist_name: str, video_title: str) -> List[str]:
         """生成bilibili标签"""
-        base_tags = ["VideoLingo", "AI翻译", "自动生成"]
+        base_tags = ["AI翻译", "自动生成"]
         
         # 根据播放列表类型添加特定标签
         if playlist_name == "中字":
@@ -145,11 +145,32 @@ class BilibiliUploader:
                 print(f"❌ Video file not found: {video_file}")
                 return False
             
-            # 生成标题
-            if custom_title:
-                title = custom_title
-            else:
-                title = video_path.stem
+            # 生成标签 - 使用原始标题，避免使用包含emoji的长标题
+            original_title = custom_title if custom_title else video_path.stem
+            tags = self.generate_tags(playlist_name, original_title)
+            
+            # 验证标签是否符合bilibili要求
+            valid_tags = []
+            for tag in tags:
+                if len(tag) <= 20:  # 单个标签不超过20个字
+                    valid_tags.append(tag)
+                else:
+                    # 如果标签太长，截断或跳过
+                    print(f"⚠️ Tag too long, skipping: {tag}")
+            
+            if len(valid_tags) > 12:
+                valid_tags = valid_tags[:12]  # 总数量不超过12个
+                print(f"⚠️ Tags truncated to 12: {valid_tags}")
+            
+            if not valid_tags:
+                # 如果没有有效标签，添加默认标签
+                valid_tags = ["VideoLingo", "AI翻译"]
+                print(f"⚠️ Using default tags: {valid_tags}")
+            
+            tags_str = ','.join(valid_tags)
+            
+            # 生成标题 - 处理标题长度和emoji
+            title = original_title
             
             # 限制标题长度为80个字符（bilibili限制）
             if len(title) > 80:
@@ -166,14 +187,10 @@ class BilibiliUploader:
                 print(f"⚠️ Title truncated again after emoji: {title}")
             
             # 生成描述
-            desc = f"AI自动翻译生成 - {title}\n\n#AI翻译"
+            desc = f"AI自动翻译生成 - {original_title}\n\n#AI翻译"
             
             # 获取分区ID
             tid = self.get_category_id(playlist_name)
-            
-            # 生成标签
-            tags = self.generate_tags(playlist_name, title)
-            tags_str = ','.join(tags)
             
             # 设置发布时间
             if schedule_time:
@@ -189,7 +206,7 @@ class BilibiliUploader:
             
             # 创建上传器实例
             uploader = BilibiliUploaderClass(
-                cookie_data, video_path, title, desc, tid, tags, dtime
+                cookie_data, video_path, title, desc, tid, valid_tags, dtime
             )
             
             # 执行上传
