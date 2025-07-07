@@ -505,6 +505,9 @@ class PlaylistMonitor:
             
             # 1. 下载视频
             if not self.download_video(video_url):
+                print(f"❌ Failed to download video {video_title}")
+                # 标记为已处理，防止重复处理
+                self.mark_video_processed(video_id, playlist_name)
                 return False
             
             # 2. 根据播放列表类型选择处理方式
@@ -530,17 +533,18 @@ class PlaylistMonitor:
                 if self.uploader_config.get("bilibili", {}).get("enabled", False):
                     await self.upload_to_bilibili(video_info, playlist_name)
                 
-                # 6. 标记为已处理
-                self.mark_video_processed(video_id, playlist_name)
-                
                 print(f"✅ Video {video_title} processed successfully!")
-                return True
             else:
                 print(f"❌ Failed to process video {video_title}")
-                return False
+            
+            # 无论成功还是失败，都标记为已处理，防止重复处理
+            self.mark_video_processed(video_id, playlist_name)
+            return success
                 
         except Exception as e:
             print(f"❌ Error processing video {video_title}: {e}")
+            # 即使发生异常，也标记为已处理，防止重复处理
+            self.mark_video_processed(video_id, playlist_name)
             return False
     
     async def check_playlists(self):
@@ -578,19 +582,29 @@ class PlaylistMonitor:
                 print(f"🎬 Processing {len(new_videos)} new videos...")
                 
                 # 处理新视频
+                success_count = 0
+                failed_count = 0
+                
                 for i, video in enumerate(new_videos, 1):
                     print(f"\n🔄 Processing video {i}/{len(new_videos)}: {video.get('title', 'Unknown')[:50]}...")
                     
                     if await self.process_video(video, playlist_name):
                         print(f"✅ Successfully processed video: {video.get('title', 'Unknown')}")
+                        success_count += 1
                         total_new_videos += 1
                     else:
                         print(f"❌ Failed to process video: {video.get('title', 'Unknown')}")
+                        failed_count += 1
                     
                     # 处理间隔，避免过于频繁
                     if i < len(new_videos):  # 最后一个视频不需要等待
                         print("⏳ Waiting 5 seconds before next video...")
                         time.sleep(5)
+                
+                print(f"📊 {playlist_name} processing summary:")
+                print(f"   - Successfully processed: {success_count}")
+                print(f"   - Failed to process: {failed_count}")
+                print(f"   - All videos marked as processed (including failed ones)")
             else:
                 print(f"✅ No new videos to process in {playlist_name}")
         
