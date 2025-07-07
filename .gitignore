@@ -176,3 +176,6 @@ installer_files/
 # cookies
 cookies/
 uploader_config/bilibili_cookies.json
+
+# 配置文件
+config.yaml
