@@ -279,10 +279,10 @@ class DouyinVideoUploader:
             
             # 如果配置了Chrome路径且路径有效，使用指定的Chrome
             if chrome_path and chrome_path != "/" and os.path.exists(chrome_path):
-                browser = await playwright.chromium.launch(headless=False, executable_path=chrome_path)
+                browser = await playwright.chromium.launch(headless=True, executable_path=chrome_path)
                 self.logger.info(f"使用指定的Chrome: {chrome_path}")
             else:
-                browser = await playwright.chromium.launch(headless=False)
+                browser = await playwright.chromium.launch(headless=True)
                 self.logger.info("使用Playwright默认的Chromium")
             
             # 创建上下文
