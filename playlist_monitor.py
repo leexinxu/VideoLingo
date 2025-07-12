@@ -104,6 +104,26 @@ def setup_logging():
         def fileno(self):
             # 为subprocess提供文件描述符
             return self.original_stdout.fileno()
+        
+        def isatty(self):
+            # 为某些库提供tty检查
+            return self.original_stdout.isatty()
+        
+        def readable(self):
+            # 为某些库提供可读性检查
+            return self.original_stdout.readable()
+        
+        def writable(self):
+            # 为某些库提供可写性检查
+            return self.original_stdout.writable()
+        
+        def seekable(self):
+            # 为某些库提供可搜索性检查
+            return self.original_stdout.seekable()
+        
+        def close(self):
+            # 为某些库提供关闭方法
+            self.original_stdout.close()
     
     # 重定向stdout
     original_stdout = sys.stdout
@@ -146,6 +166,26 @@ def setup_logging():
         def fileno(self):
             # 为subprocess提供文件描述符
             return self.original_stderr.fileno()
+        
+        def isatty(self):
+            # 为某些库提供tty检查
+            return self.original_stderr.isatty()
+        
+        def readable(self):
+            # 为某些库提供可读性检查
+            return self.original_stderr.readable()
+        
+        def writable(self):
+            # 为某些库提供可写性检查
+            return self.original_stderr.writable()
+        
+        def seekable(self):
+            # 为某些库提供可搜索性检查
+            return self.original_stderr.seekable()
+        
+        def close(self):
+            # 为某些库提供关闭方法
+            self.original_stderr.close()
         
         def _is_error_message(self, message):
             """判断是否为真正的错误信息"""
@@ -322,16 +362,29 @@ class PlaylistMonitor:
                 ydl_opts['proxy'] = self.proxy_config.get("yt_dlp_proxy", "http://127.0.0.1:7890")
                 logger.info(f"Using proxy: {ydl_opts['proxy']}")
             
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                playlist_info = ydl.extract_info(playlist_url, download=False)
-                videos = playlist_info.get('entries', [])
-                
-                # 过滤掉无效的视频条目
-                valid_videos = [v for v in videos if v and 'id' in v and 'title' in v]
-                
-                logger.info(f"Playlist info: {len(videos)} total videos, {len(valid_videos)} valid videos")
-                
-                return valid_videos
+            # === 临时还原stdout/stderr，避免yt-dlp输出被日志捕获 ===
+            current_stdout = sys.stdout
+            current_stderr = sys.stderr
+            sys.stdout = sys.__stdout__
+            sys.stderr = sys.__stderr__
+            
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    playlist_info = ydl.extract_info(playlist_url, download=False)
+                    videos = playlist_info.get('entries', [])
+                    
+                    # 过滤掉无效的视频条目
+                    valid_videos = [v for v in videos if v and 'id' in v and 'title' in v]
+                    
+                    logger.info(f"Playlist info: {len(videos)} total videos, {len(valid_videos)} valid videos")
+                    
+                    return valid_videos
+            finally:
+                # 恢复日志重定向
+                sys.stdout = current_stdout
+                sys.stderr = current_stderr
+            # === 还原结束 ===
+            
         except Exception as e:
             logger.error(f"Error getting playlist videos: {e}")
             return []
