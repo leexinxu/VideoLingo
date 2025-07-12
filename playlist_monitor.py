@@ -46,7 +46,7 @@ def setup_logging():
     # 检查日志文件大小，如果超过限制则清理
     max_log_size = 10 * 1024 * 1024  # 10MB
     if os.path.exists(log_file) and os.path.getsize(log_file) > max_log_size:
-        logger.info(f"Log file too large ({os.path.getsize(log_file)} bytes), cleaning old content...")
+        print(f"Log file too large ({os.path.getsize(log_file)} bytes), cleaning old content...")
         # 保留最后1000行
         try:
             with open(log_file, 'r', encoding='utf-8') as f:
@@ -54,9 +54,9 @@ def setup_logging():
             with open(log_file, 'w', encoding='utf-8') as f:
                 # 保留最后1000行
                 f.writelines(lines[-1000:])
-            logger.info(f"Log file cleaned, kept last 1000 lines")
+            print(f"Log file cleaned, kept last 1000 lines")
         except Exception as e:
-            logger.error(f"Error cleaning log file: {e}")
+            print(f"Error cleaning log file: {e}")
     
     # 配置日志处理器
     logging.basicConfig(
