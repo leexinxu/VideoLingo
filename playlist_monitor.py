@@ -28,6 +28,7 @@ sys.path.append(current_dir)
 from core.st_utils.imports_and_utils import *
 from core.utils.onekeycleanup import cleanup
 from core.utils.config_utils import load_key, update_key
+from core.utils.ask_gpt import ask_gpt
 from core import *
 
 # 设置日志配置
@@ -504,6 +505,76 @@ class PlaylistMonitor:
             logger.error(f"Error in dubbing processing: {e}")
             return False
     
+    def translate_title(self, text_to_translate: str) -> str:
+        """将英文标题翻译成中文"""
+        try:
+            # 更简洁明确的prompt
+            prompt = f"""Translate this English title to Chinese. Only return the Chinese translation, no explanations:
+
+{text_to_translate}
+
+Chinese translation:"""
+            
+            translated = ask_gpt(prompt, log_title="translate_title")
+            cleaned_translation = translated.strip()
+            
+            # 处理各种可能的问题格式
+            import re
+            
+            # 如果包含thinking标签，尝试提取内容
+            if '<think>' in cleaned_translation:
+                logger.warning("API returned thinking process, extracting translation")
+                # 查找thinking标签后的内容
+                match = re.search(r'</think>\s*(.+)', cleaned_translation, re.DOTALL)
+                if match:
+                    cleaned_translation = match.group(1).strip()
+                else:
+                    # 如果没有找到，直接返回原英文标题
+                    logger.warning("Could not extract translation from thinking process, using original English title")
+                    cleaned_translation = text_to_translate
+            
+            # 移除任何剩余的标签
+            cleaned_translation = re.sub(r'<[^>]*>', '', cleaned_translation).strip()
+            
+            # 如果包含换行符，只取第一行
+            if '\n' in cleaned_translation:
+                lines = cleaned_translation.split('\n')
+                # 找到第一个非空行
+                for line in lines:
+                    if line.strip():
+                        cleaned_translation = line.strip()
+                        break
+            
+            # 如果翻译结果为空，直接返回原英文标题
+            if not cleaned_translation or len(cleaned_translation.strip()) == 0:
+                logger.warning("Translation result is empty, using original English title")
+                cleaned_translation = text_to_translate
+            
+            logger.info(f"Title translation: '{text_to_translate}' -> '{cleaned_translation}'")
+            return cleaned_translation
+            
+        except Exception as e:
+            logger.error(f"Error translating title: {e}")
+            # 翻译失败时直接返回原英文标题
+            logger.info("Using original English title as fallback")
+            return text_to_translate
+    
+    def generate_new_title(self, playlist_name: str, video_title: str, theme_title: str) -> str:
+        """生成新的标题格式：【{playlist_name}】{video_title}——{theme_title}"""
+        try:
+            # 翻译英文标题
+            translated_title = self.translate_title(video_title)
+            
+            # 生成新标题
+            new_title = f"【{playlist_name}】{translated_title}——{theme_title}"
+            
+            logger.info(f"Generated new title: {new_title}")
+            return new_title
+        except Exception as e:
+            logger.error(f"Error generating new title: {e}")
+            # 出错时返回原theme_title
+            return theme_title
+
     def archive_to_history(self, playlist_name: str, video_info: Dict = None):
         """存档到历史文件夹，按播放列表和视频信息划分"""
         logger.info(f"Archiving to history for playlist: {playlist_name}")
@@ -609,12 +680,15 @@ class PlaylistMonitor:
                 logger.warning(f"terminology.json not found: {terminology_file}")
                 theme_title = video_title
             
+            # 生成新的标题格式：【{playlist_name}】{video_title}——{theme_title}
+            final_title = self.generate_new_title(playlist_name, video_title, theme_title)
+            
             logger.info(f"Uploading to Douyin: {video_title}")
             # 显示标题预览，支持长标题
-            preview_length = min(200, len(theme_title))
-            logger.info(f"Title for Douyin: {theme_title[:preview_length]}...")
-            if len(theme_title) > 200:
-                logger.info(f"Full title length: {len(theme_title)} characters")
+            preview_length = min(200, len(final_title))
+            logger.info(f"Title for Douyin: {final_title[:preview_length]}...")
+            if len(final_title) > 200:
+                logger.info(f"Full title length: {len(final_title)} characters")
             
             # 创建上传器实例
             uploader = DouyinUploader()
@@ -636,8 +710,29 @@ class PlaylistMonitor:
                     schedule_time = tomorrow.replace(hour=hour, minute=minute, second=0, microsecond=0)
                     logger.info(f"设置为定时发布: {schedule_time}")
             
-            # 执行上传，传递自定义标题
-            success = await uploader.upload_video(video_file, playlist_name, schedule_time, custom_title=theme_title)
+            # 查找封面文件 (抖音)
+            # 方法1: 查找历史文件夹中的原始视频名称对应的封面
+            original_title = video_info.get('title', 'unknown')
+            cover_file = f"history/{playlist_name}/{video_id}_{safe_title}/{original_title}.jpg"
+            
+            if not os.path.exists(cover_file):
+                # 方法2: 搜索目录下的任意.jpg文件
+                import glob
+                video_dir = f"history/{playlist_name}/{video_id}_{safe_title}"
+                jpg_files = glob.glob(f"{video_dir}/*.jpg")
+                if jpg_files:
+                    cover_file = jpg_files[0]  # 使用找到的第一个jpg文件
+                    logger.info(f"在目录中找到jpg文件: {cover_file}")
+                else:
+                    cover_file = None
+            
+            if cover_file:
+                logger.info(f"找到封面文件: {cover_file}")
+            else:
+                logger.info("未找到封面文件，将使用默认封面")
+            
+            # 执行上传，传递自定义标题和封面
+            success = await uploader.upload_video(video_file, playlist_name, schedule_time, custom_title=final_title, cover_path=cover_file)
             
             if success:
                 logger.info(f"Successfully uploaded to Douyin: {video_title}")
@@ -695,12 +790,15 @@ class PlaylistMonitor:
                 logger.warning(f"terminology.json not found: {terminology_file}")
                 theme_title = video_title
             
+            # 生成新的标题格式：【{playlist_name}】{video_title}——{theme_title}
+            final_title = self.generate_new_title(playlist_name, video_title, theme_title)
+            
             logger.info(f"Uploading to Bilibili: {video_title}")
             # 显示标题预览，支持长标题
-            preview_length = min(200, len(theme_title))
-            logger.info(f"Title for Bilibili: {theme_title[:preview_length]}...")
-            if len(theme_title) > 200:
-                logger.info(f"Full title length: {len(theme_title)} characters")
+            preview_length = min(200, len(final_title))
+            logger.info(f"Title for Bilibili: {final_title[:preview_length]}...")
+            if len(final_title) > 200:
+                logger.info(f"Full title length: {len(final_title)} characters")
             logger.info(f"Note: Bilibili title will be truncated to 80 characters if needed")
             
             # 创建上传器实例
@@ -723,8 +821,29 @@ class PlaylistMonitor:
                     schedule_time = tomorrow.replace(hour=hour, minute=minute, second=0, microsecond=0)
                     logger.info(f"设置为定时发布: {schedule_time}")
             
-            # 执行上传，传递自定义标题
-            success = await uploader.upload_video(video_file, playlist_name, schedule_time, custom_title=theme_title)
+            # 查找封面文件 (B站)
+            # 方法1: 查找历史文件夹中的原始视频名称对应的封面
+            original_title = video_info.get('title', 'unknown')
+            cover_file = f"history/{playlist_name}/{video_id}_{safe_title}/{original_title}.jpg"
+            
+            if not os.path.exists(cover_file):
+                # 方法2: 搜索目录下的任意.jpg文件
+                import glob
+                video_dir = f"history/{playlist_name}/{video_id}_{safe_title}"
+                jpg_files = glob.glob(f"{video_dir}/*.jpg")
+                if jpg_files:
+                    cover_file = jpg_files[0]  # 使用找到的第一个jpg文件
+                    logger.info(f"在目录中找到jpg文件: {cover_file}")
+                else:
+                    cover_file = None
+            
+            if cover_file:
+                logger.info(f"找到封面文件: {cover_file}")
+            else:
+                logger.info("未找到封面文件，将使用默认封面")
+                
+            # 执行上传，传递自定义标题和封面
+            success = await uploader.upload_video(video_file, playlist_name, schedule_time, custom_title=final_title, cover_path=cover_file)
             
             if success:
                 logger.info(f"Successfully uploaded to Bilibili: {video_title}")

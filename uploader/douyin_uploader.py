@@ -143,7 +143,7 @@ class DouyinUploader:
             
             # 如果配置了Chrome路径且路径有效，使用指定的Chrome
             if chrome_path and chrome_path != "/" and os.path.exists(chrome_path):
-                browser = await playwright.chromium.launch(headless=False, executable_path=chrome_path)
+                browser = await playwright.chromium.launch(headless=True, executable_path=chrome_path)
                 self.logger.info(f"使用指定的Chrome: {chrome_path}")
             else:
                 browser = await playwright.chromium.launch(headless=False)
@@ -203,7 +203,8 @@ class DouyinUploader:
         return title, tags
     
     async def upload_video(self, video_path: str, playlist_name: str, 
-                          schedule_time: Optional[datetime] = None, custom_title: str = None) -> bool:
+                          schedule_time: Optional[datetime] = None, custom_title: str = None, 
+                          cover_path: str = None) -> bool:
         """上传视频到抖音"""
         if not self.config["douyin"]["enabled"]:
             self.logger.info("抖音上传功能已禁用")
@@ -243,6 +244,7 @@ class DouyinUploader:
         upload_task = DouyinVideoUploader(
             title=title,
             file_path=video_path,
+            cover_path=cover_path,
             tags=tags,
             publish_date=schedule_time,
             account_file=account_file,
@@ -262,9 +264,10 @@ class DouyinVideoUploader:
     """抖音视频上传器"""
     
     def __init__(self, title: str, file_path: str, tags: List[str], 
-                 publish_date: datetime, account_file: str, config: Dict):
+                 publish_date: datetime, account_file: str, config: Dict, cover_path: str = None):
         self.title = title
         self.file_path = file_path
+        self.cover_path = cover_path
         self.tags = tags
         self.publish_date = publish_date
         self.account_file = account_file
@@ -279,7 +282,7 @@ class DouyinVideoUploader:
             
             # 如果配置了Chrome路径且路径有效，使用指定的Chrome
             if chrome_path and chrome_path != "/" and os.path.exists(chrome_path):
-                browser = await playwright.chromium.launch(headless=True, executable_path=chrome_path)
+                browser = await playwright.chromium.launch(headless=False, executable_path=chrome_path)
                 self.logger.info(f"使用指定的Chrome: {chrome_path}")
             else:
                 browser = await playwright.chromium.launch(headless=True)
@@ -309,6 +312,9 @@ class DouyinVideoUploader:
                 
                 # 等待视频上传完成
                 await self.wait_for_upload_complete(page)
+                
+                # 设置封面（在视频上传完成后）
+                #await self.set_cover(page)
                 
                 # 设置位置
                 await self.set_location(page)
@@ -431,7 +437,8 @@ class DouyinVideoUploader:
 
 # 便捷函数
 async def upload_to_douyin(video_path: str, playlist_name: str, 
-                          schedule_time: Optional[datetime] = None, custom_title: str = None) -> bool:
+                          schedule_time: Optional[datetime] = None, custom_title: str = None, 
+                          cover_path: str = None) -> bool:
     """便捷的上传函数"""
     uploader = DouyinUploader()
-    return await uploader.upload_video(video_path, playlist_name, schedule_time, custom_title) 
+    return await uploader.upload_video(video_path, playlist_name, schedule_time, custom_title, cover_path) 

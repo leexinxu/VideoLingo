@@ -111,7 +111,7 @@ class BilibiliUploader:
     
     async def upload_video(self, video_file: str, playlist_name: str, 
                           schedule_time: Optional[datetime] = None, 
-                          custom_title: str = None) -> bool:
+                          custom_title: str = None, cover_path: str = None) -> bool:
         """上传视频到bilibili"""
         if not BILIBILI_AVAILABLE:
             print("⚠️ Bilibili uploader not available")
@@ -206,7 +206,7 @@ class BilibiliUploader:
             
             # 创建上传器实例
             uploader = BilibiliUploaderClass(
-                cookie_data, video_path, title, desc, tid, valid_tags, dtime
+                cookie_data, video_path, title, desc, tid, valid_tags, dtime, cover_path
             )
             
             # 执行上传
@@ -228,12 +228,13 @@ class BilibiliUploaderClass:
     """Bilibili上传器类（基于biliup）"""
     
     def __init__(self, cookie_data: Dict, file: Path, title: str, desc: str, 
-                 tid: int, tags: List[str], dtime: int):
+                 tid: int, tags: List[str], dtime: int, cover_path: str = None):
         self.upload_thread_num = 3
         self.copyright = 1
         self.lines = 'AUTO'
         self.cookie_data = cookie_data
         self.file = file
+        self.cover_path = cover_path
         self.title = title
         self.desc = desc
         self.tid = tid
@@ -250,6 +251,8 @@ class BilibiliUploaderClass:
         self.data.tid = self.tid
         self.data.set_tag(self.tags)
         self.data.dtime = self.dtime
+        
+        # 注意：封面将在上传过程中处理，不在这里设置
     
     def upload(self) -> bool:
         """执行上传"""
@@ -272,6 +275,19 @@ class BilibiliUploaderClass:
                         
                         video_part['title'] = self.title
                         self.data.append(video_part)
+                        
+                        # 上传封面（如果提供了封面路径）
+                        if self.cover_path and os.path.exists(self.cover_path):
+                            try:
+                                print(f"📸 正在上传封面: {self.cover_path}")
+                                cover_url = bili.cover_up(self.cover_path)
+                                if cover_url:
+                                    self.data.cover = cover_url
+                                    print(f"✅ 封面上传成功: {cover_url}")
+                                else:
+                                    print("⚠️ 封面上传失败，将使用默认封面")
+                            except Exception as e:
+                                print(f"⚠️ 封面上传异常: {e}，将使用默认封面")
                         
                         # 提交视频
                         ret = bili.submit()
